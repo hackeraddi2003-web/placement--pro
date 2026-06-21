@@ -1,0 +1,501 @@
+import { useEffect, useState, useCallback } from 'react'
+import { useAuth } from '../hooks/useAuth'
+import {
+  Flame, Clock, ListChecks, TrendingUp, Target, Plus, Check,
+} from 'lucide-react'
+import StatCard from '../components/ui/StatCard'
+import ReadinessGauge from '../components/ui/ReadinessGauge'
+import ActivityHeatmap from '../components/ui/ActivityHeatmap'
+import EmptyState from '../components/ui/EmptyState'
+import Modal from '../components/ui/Modal'
+import { getProfile, updateStreak } from '../lib/api/profile'
+import {
+  getTasksByDate,
+  addTask,
+  toggleTask,
+  updateTask,
+  deleteTask,
+  upsertDailyTaskStats,
+  getDailyTaskStatsByDate,
+  getGoals,
+  addGoal,
+  toggleGoal,
+} from '../lib/api/tasks'
+import { getJournalEntries } from '../lib/api/journal'
+import { getDsaTopics } from '../lib/api/dsa'
+import { getProjects } from '../lib/api/projects'
+import { getSubjectProgress } from '../lib/api/skills'
+import { getEnglishLogs } from '../lib/api/english'
+import { getInterviewQuestions } from '../lib/api/interview'
+import { calculateReadinessScore } from '../lib/readinessScore'
+import ThemeToggle from '../components/ui/ThemeToggle'
+
+const todayStr = () => new Date().toISOString().slice(0, 10)
+
+
+export default function Dashboard() {
+  const { user } = useAuth()
+
+  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState(null)
+
+  const [tasks, setTasks] = useState([])
+  const [taskStats, setTaskStats] = useState(null)
+  const [taskProgressPct, setTaskProgressPct] = useState(0)
+
+  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [editTaskTitle, setEditTaskTitle] = useState('')
+
+  const [goals, setGoals] = useState([])
+  const [journalEntries, setJournalEntries] = useState([])
+
+  const [readiness, setReadiness] = useState({ overall: 0, breakdown: {} })
+  const [heatmapData, setHeatmapData] = useState({})
+
+  const [showTaskModal, setShowTaskModal] = useState(false)
+  const [showGoalModal, setShowGoalModal] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newGoalTitle, setNewGoalTitle] = useState('')
+  const [newGoalDate, setNewGoalDate] = useState('')
+
+  const load = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const today = todayStr()
+
+      const [
+        profileData,
+        todayTasks,
+        goalsData,
+        journals,
+        dsaTopics,
+        projects,
+        subjects,
+        englishLogs,
+        interviewQs,
+        statsData,
+      ] = await Promise.all([
+        updateStreak(user.id),
+        getTasksByDate(user.id, today),
+        getGoals(user.id),
+        getJournalEntries(user.id, { limit: 90 }),
+        getDsaTopics(user.id),
+        getProjects(user.id),
+        getSubjectProgress(user.id),
+        getEnglishLogs(user.id, { limit: 30 }),
+        getInterviewQuestions(user.id),
+        getDailyTaskStatsByDate(user.id, today),
+      ])
+
+      setProfile(profileData)
+      setTasks(todayTasks)
+      setTaskStats(statsData || null)
+      setTaskProgressPct(typeof statsData?.completion_pct === 'number' ? statsData.completion_pct : 0)
+
+      setGoals(goalsData.filter((g) => !g.is_completed).slice(0, 5))
+      setJournalEntries(journals)
+
+      setReadiness(
+        calculateReadinessScore({
+          dsaTopics,
+          projects,
+          subjects,
+          englishLogs,
+          interviewQuestions: interviewQs,
+          streak: profileData.streak_count || 0,
+        })
+      )
+
+      const map = {}
+      journals.forEach((j) => {
+        const intensity = j.study_hours >= 4 ? 4 : j.study_hours >= 2 ? 3 : j.study_hours > 0 ? 2 : 1
+        map[j.entry_date] = intensity
+      })
+      setHeatmapData(map)
+    } catch (err) {
+      console.error('Dashboard load error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const recalcAndPersistTaskStats = useCallback(async (nextTasks) => {
+    if (!user) return
+
+    const totalTasks = nextTasks.length
+    const completedTasks = nextTasks.filter((t) => t.is_completed).length
+    const completionPct = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
+
+    const payload = {
+      task_date: todayStr(),
+      total_tasks: totalTasks,
+      completed_tasks: completedTasks,
+      completion_pct: completionPct,
+    }
+
+    await upsertDailyTaskStats(user.id, payload)
+    setTaskStats({ ...payload, user_id: user.id })
+    setTaskProgressPct(completionPct)
+  }, [user])
+
+  const handleAddTask = async (e) => {
+    e.preventDefault()
+    if (!newTaskTitle.trim()) return
+
+    const created = await addTask(user.id, {
+      title: newTaskTitle.trim(),
+      task_date: todayStr(),
+    })
+
+    const next = [...tasks, created]
+    setTasks(next)
+    await recalcAndPersistTaskStats(next)
+
+    setNewTaskTitle('')
+    setShowTaskModal(false)
+  }
+
+  const handleToggleTask = async (task) => {
+    const updated = await toggleTask(task.id, !task.is_completed)
+    const next = tasks.map((t) => (t.id === task.id ? updated : t))
+    setTasks(next)
+    await recalcAndPersistTaskStats(next)
+  }
+
+  const startEditingTask = (task) => {
+    setEditingTaskId(task.id)
+    setEditTaskTitle(task.title)
+  }
+
+  const cancelEditingTask = () => {
+    setEditingTaskId(null)
+    setEditTaskTitle('')
+  }
+
+  const handleUpdateTask = async (task) => {
+    if (!editTaskTitle.trim()) return
+
+    const updated = await updateTask(task.id, { title: editTaskTitle.trim() })
+    const next = tasks.map((t) => (t.id === task.id ? updated : t))
+    setTasks(next)
+
+    await recalcAndPersistTaskStats(next)
+    cancelEditingTask()
+  }
+
+  const handleDeleteTask = async (task) => {
+    await deleteTask(task.id)
+    const next = tasks.filter((t) => t.id !== task.id)
+    setTasks(next)
+
+    await recalcAndPersistTaskStats(next)
+  }
+
+  const handleAddGoal = async (e) => {
+    e.preventDefault()
+    if (!newGoalTitle.trim()) return
+
+    const created = await addGoal(user.id, {
+      title: newGoalTitle.trim(),
+      target_date: newGoalDate || null,
+    })
+
+    setGoals((prev) => [...prev, created])
+    setNewGoalTitle('')
+    setNewGoalDate('')
+    setShowGoalModal(false)
+  }
+
+  const completedToday = tasks.filter((t) => t.is_completed).length
+  const totalTodayTasks = tasks.length
+  const dailyCompletionLabel = totalTodayTasks === 0 ? '0%' : `${taskProgressPct}%`
+
+  const weekStudyHours = journalEntries
+    .filter((j) => {
+      const d = new Date(j.entry_date)
+      const now = new Date()
+      const diff = (now - d) / 86400000
+      return diff <= 7
+    })
+    .reduce((sum, j) => sum + (j.study_hours || 0), 0)
+
+  if (loading) {
+    return <EmptyState title="Loading dashboard…" copy="Pulling your latest progress from the cloud." />
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Command Center</h1>
+          <p className="page-subtitle">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} — here's where you stand.
+          </p>
+        </div>
+
+        <ThemeToggle />
+      </div>
+
+
+      <div className="grid-stats">
+        <StatCard icon={Flame} label="Daily Streak" value={`${profile?.streak_count || 0}d`} accent="amber" />
+        <StatCard icon={Clock} label="Study Hours (7d)" value={`${weekStudyHours.toFixed(1)}h`} accent="teal" />
+        <StatCard icon={ListChecks} label="Today's Tasks" value={`${completedToday}/${tasks.length}`} accent="violet" />
+        <StatCard icon={TrendingUp} label="Longest Streak" value={`${profile?.longest_streak || 0}d`} accent="red" />
+      </div>
+
+      <div className="grid-2col">
+        <div>
+          <div className="panel section-card">
+            <div className="section-card-header">
+              <span className="section-card-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                Today's Tasks
+                <span className="tag tag-amber" style={{ marginLeft: 'auto' }}>{dailyCompletionLabel}</span>
+              </span>
+              <button className="btn btn-ghost" onClick={() => setShowTaskModal(true)}>
+                <Plus size={16} /> Add
+              </button>
+            </div>
+
+            <div style={{ marginTop: -4, marginBottom: 14, width: '100%' }}>
+              <div className="progress-track" aria-label="Daily completion progress">
+                <div className="progress-fill" style={{ width: `${taskProgressPct}%` }} />
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: 'var(--text-tertiary)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                <span>
+                  {completedToday}/{totalTodayTasks} completed
+                </span>
+                <span>{totalTodayTasks === 0 ? 'Log tasks to start tracking' : `${taskProgressPct}% today`}</span>
+              </div>
+            </div>
+
+            {tasks.length === 0 ? (
+              <EmptyState
+                icon={ListChecks}
+                title="No tasks logged for today"
+                copy="Add your first task to start tracking the day."
+              />
+            ) : (
+              tasks.map((task) => (
+                <div className="list-row" key={task.id}>
+                  <button
+                    onClick={() => handleToggleTask(task)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      color: 'inherit',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        flexShrink: 0,
+                        border: `1.5px solid ${task.is_completed ? 'var(--signal-teal)' : 'var(--border-active)'}`,
+                        background: task.is_completed ? 'var(--signal-teal)' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {task.is_completed && <Check size={13} color="#0a0d12" strokeWidth={3} />}
+                    </span>
+
+                    {editingTaskId === task.id ? (
+                      <input
+                        className="input"
+                        style={{ maxWidth: 420 }}
+                        value={editTaskTitle}
+                        onChange={(e) => setEditTaskTitle(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateTask(task)
+                          if (e.key === 'Escape') cancelEditingTask()
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 14,
+                          textDecoration: task.is_completed ? 'line-through' : 'none',
+                          color: task.is_completed ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        }}
+                      >
+                        {task.title}
+                      </span>
+                    )}
+                  </button>
+
+                  {editingTaskId === task.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button className="btn btn-ghost" style={{ padding: '8px 10px' }} onClick={() => handleUpdateTask(task)}>
+                        Save
+                      </button>
+                      <button className="btn btn-ghost" style={{ padding: '8px 10px' }} onClick={cancelEditingTask}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startEditingTask(task)
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: 'var(--signal-red)' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteTask(task)
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <span className="tag tag-neutral">{task.category}</span>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="panel section-card">
+            <div className="section-card-header">
+              <span className="section-card-title">Activity Heatmap</span>
+              <span className="label-eyebrow">LAST 18 WEEKS</span>
+            </div>
+            <ActivityHeatmap data={heatmapData} />
+          </div>
+        </div>
+
+        <div>
+          <div className="panel section-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="section-card-header" style={{ width: '100%' }}>
+              <span className="section-card-title">Placement Readiness</span>
+            </div>
+            <ReadinessGauge score={readiness.overall} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20, justifyContent: 'center' }}>
+              {Object.entries(readiness.breakdown).map(([key, val]) => (
+                <span key={key} className="tag tag-neutral">
+                  {key}: {val}%
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel section-card">
+            <div className="section-card-header">
+              <span className="section-card-title">Upcoming Goals</span>
+              <button className="btn btn-ghost" onClick={() => setShowGoalModal(true)}>
+                <Plus size={16} />
+              </button>
+            </div>
+
+            {goals.length === 0 ? (
+              <EmptyState icon={Target} title="No goals yet" copy="Set a target so progress has a direction." />
+            ) : (
+              goals.map((goal) => (
+                <div className="list-row" key={goal.id}>
+                  <button
+                    onClick={async () => {
+                      await toggleGoal(goal.id, true)
+                      setGoals((prev) => prev.filter((g) => g.id !== goal.id))
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      color: 'inherit',
+                    }}
+                  >
+                    <Target size={14} color="var(--signal-amber)" />
+                    <span style={{ fontSize: 13 }}>{goal.title}</span>
+                  </button>
+
+                  {goal.target_date && (
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      {new Date(goal.target_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showTaskModal && (
+        <Modal title="Add today's task" onClose={() => setShowTaskModal(false)}>
+          <form className="form-grid" onSubmit={handleAddTask}>
+            <input
+              className="input"
+              autoFocus
+              placeholder="e.g. Solve 2 Sliding Window problems"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setShowTaskModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Add task</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showGoalModal && (
+        <Modal title="Add a goal" onClose={() => setShowGoalModal(false)}>
+          <form className="form-grid" onSubmit={handleAddGoal}>
+            <input
+              className="input"
+              autoFocus
+              placeholder="e.g. Finish Graph topic"
+              value={newGoalTitle}
+              onChange={(e) => setNewGoalTitle(e.target.value)}
+            />
+            <input
+              className="input"
+              type="date"
+              value={newGoalDate}
+              onChange={(e) => setNewGoalDate(e.target.value)}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setShowGoalModal(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Add goal</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  )
+}
+

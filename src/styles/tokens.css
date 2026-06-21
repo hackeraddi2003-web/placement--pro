@@ -1,0 +1,327 @@
+/* ============================================
+   PlacementOS Pro — Design Tokens
+   Identity: Mission-control cockpit for the placement grind.
+   Not a SaaS dashboard. An instrument panel you check daily.
+   ============================================ */
+
+[data-theme="light"] {
+  /* ---- Surface ---- */
+  --bg-base: #f7f8fb;
+  --bg-panel: #ffffff;
+  --bg-panel-raised: #f2f4f8;
+  --bg-panel-hover: #eef1f6;
+  --border-hairline: #e4e8f0;
+  --border-active: #cdd6e6;
+
+  /* ---- Text ---- */
+  --text-primary: #0b1320;
+  --text-secondary: #415063;
+  --text-tertiary: #6b778c;
+  --text-on-amber: #1a0f00;
+
+  /* Helps charts/tooltips that rely on dark assumed styling */
+  color-scheme: light;
+}
+
+[data-theme="dark"],
+:root {
+  /* ---- Surface ---- */
+  --bg-base: #0a0d12;
+  --bg-panel: #12161d;
+  --bg-panel-raised: #181d26;
+  --bg-panel-hover: #1e2430;
+  --border-hairline: #232a36;
+  --border-active: #353f50;
+
+  /* ---- Text ---- */
+  --text-primary: #eef1f6;
+  --text-secondary: #9aa4b5;
+  --text-tertiary: #5d6678;
+  --text-on-amber: #1a0f00;
+
+  /* Identity: base theme is dark by default */
+  color-scheme: dark;
+}
+
+:root {
+  /* keep remaining token definitions below */
+  /* ---- Surface ---- */
+  --bg-base: #0a0d12;
+  --bg-panel: #12161d;
+  --bg-panel-raised: #181d26;
+  --bg-panel-hover: #1e2430;
+  --border-hairline: #232a36;
+  --border-active: #353f50;
+
+  /* ---- Signal colors (the instrument-panel accent system) ---- */
+  --signal-amber: #ff8a1f;
+  --signal-amber-dim: #ff8a1f1a;
+  --signal-amber-glow: #ff8a1f33;
+  --signal-teal: #2dd4bf;
+  --signal-teal-dim: #2dd4bf1a;
+  --signal-red: #f0566b;
+  --signal-red-dim: #f0566b1a;
+  --signal-violet: #8b7cf6;
+  --signal-violet-dim: #8b7cf61a;
+
+  /* ---- Text ---- */
+  --text-primary: #eef1f6;
+  --text-secondary: #9aa4b5;
+  --text-tertiary: #5d6678;
+  --text-on-amber: #1a0f00;
+
+  /* ---- Type ---- */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* ---- Spacing scale ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ---- Radius ---- */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-full: 999px;
+
+  /* ---- Shadow ---- */
+  --shadow-panel: 0 1px 0 0 rgba(255, 255, 255, 0.02) inset, 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --shadow-raised: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-base);
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(255, 138, 31, 0.05), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(45, 212, 191, 0.04), transparent 50%);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-active);
+  border-radius: var(--r-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ---- Focus visibility (accessibility) ---- */
+:focus-visible {
+  outline: 2px solid var(--signal-amber);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---- Loading spin utility ---- */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ---- Shared primitives ---- */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-panel);
+}
+
+.label-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.btn:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-active);
+}
+
+.btn-primary {
+  background: var(--signal-amber);
+  color: var(--text-on-amber);
+  border-color: var(--signal-amber);
+}
+
+.btn-primary:hover {
+  background: #ff9d40;
+  box-shadow: 0 0 0 4px var(--signal-amber-dim);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-panel-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--signal-amber);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+
+.tag-amber {
+  background: var(--signal-amber-dim);
+  color: var(--signal-amber);
+}
+
+.tag-teal {
+  background: var(--signal-teal-dim);
+  color: var(--signal-teal);
+}
+
+.tag-red {
+  background: var(--signal-red-dim);
+  color: var(--signal-red);
+}
+
+.tag-violet {
+  background: var(--signal-violet-dim);
+  color: var(--signal-violet);
+}
+
+.tag-neutral {
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
