@@ -47,9 +47,15 @@ export async function upsertJournalEntry(userId, entry) {
     payload,
     ['user_id', 'entry_date'],
     async (item) => {
+      // offlineDb assigns a synthetic composite id (e.g. "local_upsert_..._<date>")
+      // for local cache reconciliation. That is not a valid uuid, so it must be
+      // stripped before hitting Supabase (the DB generates/keeps the real id via
+      // the user_id+entry_date conflict target). created_at is also dropped so an
+      // update never clobbers the original value.
+      const { id, created_at, ...rest } = item
       const { data, error } = await supabase
         .from('journal_entries')
-        .upsert(item, { onConflict: 'user_id,entry_date' })
+        .upsert(rest, { onConflict: 'user_id,entry_date' })
         .select()
         .single()
       if (error) {

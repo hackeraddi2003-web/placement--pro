@@ -62,9 +62,11 @@ export async function addTask(userId, task) {
     userId,
     task,
     async (item) => {
+      // daily_tasks has no updated_at column; strip offlineDb's synthetic field.
+      const { updated_at, ...rest } = item
       const { data, error } = await supabase
         .from('daily_tasks')
-        .insert({ ...item, user_id: userId })
+        .insert({ ...rest, user_id: userId })
         .select()
         .single()
       if (error) throw error
@@ -135,9 +137,12 @@ export async function upsertDailyTaskStats(userId, stats) {
     stats,
     ['user_id', 'task_date'],
     async (item) => {
+      // daily_task_stats has a composite PK (user_id, task_date) and no id/created_at
+      // columns; drop offlineDb's synthetic fields before upserting.
+      const { id, created_at, ...rest } = item
       const { data, error } = await supabase
         .from('daily_task_stats')
-        .upsert(item, { onConflict: 'user_id,task_date' })
+        .upsert(rest, { onConflict: 'user_id,task_date' })
         .select()
         .single()
       if (error) throw error
@@ -188,9 +193,11 @@ export async function addGoal(userId, goal) {
     userId,
     goal,
     async (item) => {
+      // goals has no updated_at column; strip offlineDb's synthetic field.
+      const { updated_at, ...rest } = item
       const { data, error } = await supabase
         .from('goals')
-        .insert({ ...item, user_id: userId })
+        .insert({ ...rest, user_id: userId })
         .select()
         .single()
       if (error) throw error
