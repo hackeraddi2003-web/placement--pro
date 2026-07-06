@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { CalendarDays, List, Smile, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, List, Smile, Zap, ChevronLeft, ChevronRight, Upload, Trash2, Plus } from 'lucide-react'
 import EmptyState from '../components/ui/EmptyState'
-import { getJournalEntries, upsertJournalEntry } from '../lib/api/journal'
+import { getJournalEntries, upsertJournalEntry, deleteJournalEntry } from '../lib/api/journal'
+import { compressImage } from '../lib/imageCompressor'
 import './JournalPage.css'
 
 const MOOD_EMOJI = ['😞', '😐', '🙂', '😄', '🤩']
@@ -43,35 +44,50 @@ export default function JournalPage() {
     e.preventDefault()
     setSaving(true)
     try {
-      console.log('[JournalPage] Save clicked', {
-        userId: user?.id,
-        selectedDate,
-        form,
-        rawStudyHours: form.study_hours,
-      })
-
       const payload = { ...form, study_hours: parseFloat(form.study_hours) || 0 }
-      console.log('[JournalPage] upsert payload', payload)
-
       const saved = await upsertJournalEntry(user.id, payload)
-      console.log('[JournalPage] upsertJournalEntry response', saved)
 
       setEntries((prev) => {
-        const others = prev.filter((e) => e.entry_date !== saved.entry_date)
+        const others = prev.filter((x) => x.entry_date !== saved.entry_date)
         return [saved, ...others].sort((a, b) => b.entry_date.localeCompare(a.entry_date))
       })
-      setSavedMsg('Saved')
+      setSavedMsg('Saved successfully')
       setTimeout(() => setSavedMsg(''), 1800)
     } catch (error) {
-      console.log('[JournalPage] Save failed error object', error)
-      const msg = error?.message ? String(error.message) : 'Save failed (unknown error)'
+      console.error('[JournalPage] Save failed', error)
+      const msg = error?.message ? String(error.message) : 'Save failed'
       setSavedMsg(`Error: ${msg}`)
     } finally {
       setSaving(false)
     }
   }
 
-  // Calendar grid for monthCursor
+  const handleDelete = async () => {
+    if (!form.id) return
+    if (!window.confirm('Delete this journal entry?')) return
+    setSaving(true)
+    try {
+      await deleteJournalEntry(form.id)
+      setEntries((prev) => prev.filter((entry) => entry.id !== form.id))
+      setSelectedDate(todayStr())
+      setSavedMsg('Deleted successfully')
+      setTimeout(() => setSavedMsg(''), 1800)
+    } catch (error) {
+      console.error('[JournalPage] Delete failed', error)
+      const msg = error?.message ? String(error.message) : 'Delete failed'
+      setSavedMsg(`Error: ${msg}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleNewEntry = () => {
+    const nextDate = todayStr()
+    setSelectedDate(nextDate)
+    setForm(blankForm(nextDate))
+  }
+
+  // Calendar grid
   const year = monthCursor.getFullYear()
   const month = monthCursor.getMonth()
   const firstDay = new Date(year, month, 1)
@@ -90,13 +106,26 @@ export default function JournalPage() {
           <h1 className="page-title">Daily Journal</h1>
           <p className="page-subtitle">One entry a day. This is the record your Mentor and Analytics read from.</p>
         </div>
-        <div className="view-toggle">
-          <button className={`view-toggle-btn ${view === 'timeline' ? 'is-active' : ''}`} onClick={() => setView('timeline')}>
-            <List size={15} /> Timeline
+        <div className="page-actions">
+          <button className="btn btn-ghost" type="button" onClick={handleNewEntry}>
+            <Plus size={14} /> New entry
           </button>
-          <button className={`view-toggle-btn ${view === 'calendar' ? 'is-active' : ''}`} onClick={() => setView('calendar')}>
-            <CalendarDays size={15} /> Calendar
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={handleDelete}
+            disabled={!form.id || saving}
+          >
+            <Trash2 size={14} /> Delete
           </button>
+          <div className="view-toggle">
+            <button className={`view-toggle-btn ${view === 'timeline' ? 'is-active' : ''}`} onClick={() => setView('timeline')}>
+              <List size={15} /> Timeline
+            </button>
+            <button className={`view-toggle-btn ${view === 'calendar' ? 'is-active' : ''}`} onClick={() => setView('calendar')}>
+              <CalendarDays size={15} /> Calendar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -104,7 +133,7 @@ export default function JournalPage() {
         <div>
           <div className="panel section-card">
             <div className="section-card-header">
-              <span className="section-card-title mono">{selectedDate}</span>
+              <span className="section-card-title mono" style={{ color: 'var(--signal-amber)', fontWeight: 600 }}>{selectedDate}</span>
               {savedMsg && <span className="tag tag-teal">{savedMsg}</span>}
             </div>
             <form className="form-grid" onSubmit={handleSave}>
@@ -159,11 +188,16 @@ export default function JournalPage() {
               </div>
               <Field label="Challenges faced" value={form.challenges} onChange={(v) => setForm({ ...form, challenges: v })} />
               <Field label="Tomorrow's target" value={form.tomorrow_target} onChange={(v) => setForm({ ...form, tomorrow_target: v })} />
-              <Field label="Personal notes" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
+              <Field label="Personal notes & attachments" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
 
-              <button className="btn btn-primary" type="submit" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-                {saving ? 'Saving…' : 'Save entry'}
-              </button>
+              <div className="journal-form-actions">
+                <button className="btn btn-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save entry'}
+                </button>
+                <button className="btn btn-ghost" type="button" onClick={handleNewEntry} disabled={saving}>
+                  New entry
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -212,13 +246,19 @@ export default function JournalPage() {
                 <EmptyState icon={CalendarDays} title="No entries yet" copy="Your first journal entry will show up here." />
               ) : (
                 <div className="timeline-list">
-                  {entries.slice(0, 30).map((e) => (
-                    <button key={e.id} className="timeline-item" onClick={() => setSelectedDate(e.entry_date)}>
-                      <div className="timeline-item-date mono">{e.entry_date}</div>
-                      <div className="timeline-item-mood">{MOOD_EMOJI[(e.mood || 3) - 1]}</div>
-                      <div className="timeline-item-win">{e.biggest_win || e.studied || 'No notes'}</div>
-                    </button>
-                  ))}
+                  {entries.slice(0, 30).map((e) => {
+                    // strip image dataurl or large markdown from summary snippet
+                    const cleanText = (e.biggest_win || e.studied || 'No notes')
+                      .replace(/!\[.*?\]\(data:image\/.*?\)/g, '[Image]')
+                      .substring(0, 80)
+                    return (
+                      <button key={e.id} className="timeline-item" onClick={() => setSelectedDate(e.entry_date)}>
+                        <div className="timeline-item-date mono">{e.entry_date}</div>
+                        <div className="timeline-item-mood">{MOOD_EMOJI[(e.mood || 3) - 1]}</div>
+                        <div className="timeline-item-win" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cleanText}</div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -229,11 +269,74 @@ export default function JournalPage() {
   )
 }
 
+function renderTextWithImages(text) {
+  if (!text) return null
+  const regex = /!\[(.*?)\]\((data:image\/.*?;base64,.*?)\)/g
+  const parts = []
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(text)) !== null) {
+    const textBefore = text.substring(lastIndex, match.index)
+    if (textBefore) {
+      parts.push(<span key={lastIndex}>{textBefore}</span>)
+    }
+    const alt = match[1]
+    const src = match[2]
+    parts.push(
+      <div key={match.index} style={{ margin: '10px 0', maxWidth: '100%', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-hairline)' }}>
+        <img src={src} alt={alt} style={{ width: '100%', maxHeight: 260, objectFit: 'contain', display: 'block', background: 'rgba(0,0,0,0.2)' }} />
+        {alt && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '6px 10px', background: 'var(--bg-panel-raised)', borderTop: '1px solid var(--border-hairline)', fontFamily: 'var(--font-mono)' }}>{alt}</div>}
+      </div>
+    )
+    lastIndex = regex.lastIndex
+  }
+
+  const textAfter = text.substring(lastIndex)
+  if (textAfter) {
+    parts.push(<span key={lastIndex}>{textAfter}</span>)
+  }
+
+  return <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{parts}</div>
+}
+
 function Field({ label, value, onChange }) {
+  const [uploading, setUploading] = useState(false)
+
+  const handleUploadImage = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const compressed = await compressImage(file, 800, 0.7)
+      const imageMarkdown = `\n\n![${file.name}](${compressed})\n`
+      onChange((value || '') + imageMarkdown)
+    } catch (err) {
+      console.error('Image upload failed:', err)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
   return (
-    <div>
-      <label className="label-eyebrow">{label}</label>
-      <textarea className="input" value={value} onChange={(e) => onChange(e.target.value)} rows={2} />
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <label className="label-eyebrow" style={{ marginBottom: 0 }}>{label}</label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--signal-teal)', cursor: 'pointer', fontWeight: 500 }}>
+          <Upload size={12} />
+          {uploading ? 'Compressing...' : 'Add Image'}
+          <input type="file" accept="image/*" onChange={handleUploadImage} style={{ display: 'none' }} disabled={uploading} />
+        </label>
+      </div>
+      <textarea className="input" value={value || ''} onChange={(e) => onChange(e.target.value)} rows={2} style={{ lineHeight: 1.5 }} />
+
+      {value && value.includes('data:image') && (
+        <div style={{ marginTop: 8, padding: 10, background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border-hairline)' }}>
+          <div style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>Inline Render Preview</div>
+          {renderTextWithImages(value)}
+        </div>
+      )}
     </div>
   )
 }

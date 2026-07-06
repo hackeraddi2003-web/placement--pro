@@ -4,26 +4,7 @@
    Not a SaaS dashboard. An instrument panel you check daily.
    ============================================ */
 
-[data-theme="light"] {
-  /* ---- Surface ---- */
-  --bg-base: #f7f8fb;
-  --bg-panel: #ffffff;
-  --bg-panel-raised: #f2f4f8;
-  --bg-panel-hover: #eef1f6;
-  --border-hairline: #e4e8f0;
-  --border-active: #cdd6e6;
-
-  /* ---- Text ---- */
-  --text-primary: #0b1320;
-  --text-secondary: #415063;
-  --text-tertiary: #6b778c;
-  --text-on-amber: #1a0f00;
-
-  /* Helps charts/tooltips that rely on dark assumed styling */
-  color-scheme: light;
-}
-
-[data-theme="dark"],
+/* ---- Color System (Default: Dark Theme) ---- */
 :root {
   /* ---- Surface ---- */
   --bg-base: #0a0d12;
@@ -38,20 +19,6 @@
   --text-secondary: #9aa4b5;
   --text-tertiary: #5d6678;
   --text-on-amber: #1a0f00;
-
-  /* Identity: base theme is dark by default */
-  color-scheme: dark;
-}
-
-:root {
-  /* keep remaining token definitions below */
-  /* ---- Surface ---- */
-  --bg-base: #0a0d12;
-  --bg-panel: #12161d;
-  --bg-panel-raised: #181d26;
-  --bg-panel-hover: #1e2430;
-  --border-hairline: #232a36;
-  --border-active: #353f50;
 
   /* ---- Signal colors (the instrument-panel accent system) ---- */
   --signal-amber: #ff8a1f;
@@ -63,12 +30,6 @@
   --signal-red-dim: #f0566b1a;
   --signal-violet: #8b7cf6;
   --signal-violet-dim: #8b7cf61a;
-
-  /* ---- Text ---- */
-  --text-primary: #eef1f6;
-  --text-secondary: #9aa4b5;
-  --text-tertiary: #5d6678;
-  --text-on-amber: #1a0f00;
 
   /* ---- Type ---- */
   --font-display: 'Space Grotesk', sans-serif;
@@ -101,6 +62,45 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 120ms;
   --dur-base: 200ms;
+
+  color-scheme: dark;
+}
+
+/* Explicit Dark Theme */
+html[data-theme="dark"] {
+  --bg-base: #0a0d12;
+  --bg-panel: #12161d;
+  --bg-panel-raised: #181d26;
+  --bg-panel-hover: #1e2430;
+  --border-hairline: #232a36;
+  --border-active: #353f50;
+
+  --text-primary: #eef1f6;
+  --text-secondary: #9aa4b5;
+  --text-tertiary: #5d6678;
+  --text-on-amber: #1a0f00;
+
+  color-scheme: dark;
+}
+
+/* Explicit Light Theme (Higher Specificity) */
+html[data-theme="light"] {
+  --bg-base: #f7f8fb;
+  --bg-panel: #ffffff;
+  --bg-panel-raised: #f2f4f8;
+  --bg-panel-hover: #eef1f6;
+  --border-hairline: #e4e8f0;
+  --border-active: #cdd6e6;
+
+  --text-primary: #0b1320;
+  --text-secondary: #415063;
+  --text-tertiary: #6b778c;
+  --text-on-amber: #1a0f00;
+
+  --shadow-panel: 0 1px 0 0 rgba(0, 0, 0, 0.02) inset, 0 8px 24px -8px rgba(0, 0, 0, 0.1);
+  --shadow-raised: 0 1px 0 0 rgba(0, 0, 0, 0.03) inset, 0 16px 40px -12px rgba(0, 0, 0, 0.12);
+
+  color-scheme: light;
 }
 
 * {
@@ -110,7 +110,7 @@
 }
 
 html {
-  color-scheme: dark;
+  /* color-scheme is managed dynamically via data-theme on root */
 }
 
 body {

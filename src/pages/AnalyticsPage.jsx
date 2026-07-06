@@ -46,26 +46,35 @@ export default function AnalyticsPage() {
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const [j, e, topics, problems, proj, subj, iq, profile] = await Promise.all([
-      getJournalEntries(user.id, { limit: 90 }),
-      getEnglishLogs(user.id, { limit: 90 }),
-      getDsaTopics(user.id),
-      getDsaProblems(user.id),
-      getProjects(user.id),
-      getSubjectProgress(user.id),
-      getInterviewQuestions(user.id),
-      getProfile(user.id),
-    ])
-    setJournal(j)
-    setEnglish(e)
-    setDsaTopics(topics)
-    setDsaProblems(problems)
-    setProjects(proj)
-    setSubjects(subj)
-    setInterviewQs(iq)
-    setStreak(profile?.streak_count || 0)
-    setLoading(false)
+    try {
+      const results = await Promise.allSettled([
+        getJournalEntries(user.id, { limit: 90 }),
+        getEnglishLogs(user.id, { limit: 90 }),
+        getDsaTopics(user.id),
+        getDsaProblems(user.id),
+        getProjects(user.id),
+        getSubjectProgress(user.id),
+        getInterviewQuestions(user.id),
+        getProfile(user.id),
+      ])
+      const [j, e, topics, problems, proj, subj, iq, profile] = results.map(
+        (r) => (r.status === 'fulfilled' ? r.value : null)
+      )
+      setJournal(Array.isArray(j) ? j : [])
+      setEnglish(Array.isArray(e) ? e : [])
+      setDsaTopics(Array.isArray(topics) ? topics : [])
+      setDsaProblems(Array.isArray(problems) ? problems : [])
+      setProjects(Array.isArray(proj) ? proj : [])
+      setSubjects(Array.isArray(subj) ? subj : [])
+      setInterviewQs(Array.isArray(iq) ? iq : [])
+      setStreak(profile?.streak_count || 0)
+    } catch (err) {
+      console.error('[Analytics] load error:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [user])
+
 
   useEffect(() => { load() }, [load])
 

@@ -15,10 +15,10 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import { ThemeProvider } from './theme/ThemeProvider'
 
-function PrivateRoute({ children }) {
+function PrivateRoute({ children, requireAuth = true }) {
   const { user, loading } = useAuth()
   if (loading) return <FullScreenLoader />
-  if (!user) return <Navigate to="/login" replace />
+  if (requireAuth && !user) return <Navigate to="/login" replace />
   return children
 }
 
@@ -50,7 +50,7 @@ export default function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="journal" element={<JournalPage />} />
-              <Route path="english" element={<EnglishHubPage />} />
+              <Route path="english" element={<PrivateRoute requireAuth={false}><EnglishHubPage /></PrivateRoute>} />
               <Route path="dsa" element={<DsaTrackerPage />} />
               <Route path="skills" element={<SkillsPage />} />
               <Route path="projects" element={<ProjectsPage />} />

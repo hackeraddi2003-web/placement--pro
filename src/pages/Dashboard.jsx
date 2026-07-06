@@ -11,6 +11,7 @@ import Modal from '../components/ui/Modal'
 import { getProfile, updateStreak } from '../lib/api/profile'
 import {
   getTasksByDate,
+  getPastUncompletedTasks,
   addTask,
   toggleTask,
   updateTask,
@@ -64,18 +65,17 @@ export default function Dashboard() {
     try {
       const today = todayStr()
 
-      const [
-        profileData,
-        todayTasks,
-        goalsData,
-        journals,
-        dsaTopics,
-        projects,
-        subjects,
-        englishLogs,
-        interviewQs,
-        statsData,
-      ] = await Promise.all([
+      // Rollover past uncompleted tasks to today
+      try {
+        const pastTasks = await getPastUncompletedTasks(user.id, today)
+        if (pastTasks && pastTasks.length > 0) {
+          await Promise.all(pastTasks.map((t) => updateTask(t.id, { task_date: today })))
+        }
+      } catch (err) {
+        console.warn('Failed to rollover past uncompleted tasks:', err)
+      }
+
+      const results = await Promise.allSettled([
         updateStreak(user.id),
         getTasksByDate(user.id, today),
         getGoals(user.id),
@@ -88,36 +88,44 @@ export default function Dashboard() {
         getDailyTaskStatsByDate(user.id, today),
       ])
 
-      setProfile(profileData)
-      setTasks(todayTasks)
+      const [
+        profileData, todayTasks, goalsData, journals,
+        dsaTopics, projects, subjects, englishLogs, interviewQs, statsData,
+      ] = results.map((r) => (r.status === 'fulfilled' ? r.value : null))
+
+      setProfile(profileData || {})
+      setTasks(Array.isArray(todayTasks) ? todayTasks : [])
       setTaskStats(statsData || null)
       setTaskProgressPct(typeof statsData?.completion_pct === 'number' ? statsData.completion_pct : 0)
 
-      setGoals(goalsData.filter((g) => !g.is_completed).slice(0, 5))
-      setJournalEntries(journals)
+      setGoals(Array.isArray(goalsData) ? goalsData.filter((g) => !g.is_completed).slice(0, 5) : [])
+      setJournalEntries(Array.isArray(journals) ? journals : [])
 
       setReadiness(
         calculateReadinessScore({
-          dsaTopics,
-          projects,
-          subjects,
-          englishLogs,
-          interviewQuestions: interviewQs,
-          streak: profileData.streak_count || 0,
+          dsaTopics: Array.isArray(dsaTopics) ? dsaTopics : [],
+          projects: Array.isArray(projects) ? projects : [],
+          subjects: Array.isArray(subjects) ? subjects : [],
+          englishLogs: Array.isArray(englishLogs) ? englishLogs : [],
+          interviewQuestions: Array.isArray(interviewQs) ? interviewQs : [],
+          streak: profileData?.streak_count || 0,
         })
       )
 
       const map = {}
-      journals.forEach((j) => {
-        const intensity = j.study_hours >= 4 ? 4 : j.study_hours >= 2 ? 3 : j.study_hours > 0 ? 2 : 1
-        map[j.entry_date] = intensity
-      })
+      if (Array.isArray(journals)) {
+        journals.forEach((j) => {
+          const intensity = j.study_hours >= 4 ? 4 : j.study_hours >= 2 ? 3 : j.study_hours > 0 ? 2 : 1
+          map[j.entry_date] = intensity
+        })
+      }
       setHeatmapData(map)
     } catch (err) {
       console.error('Dashboard load error:', err)
     } finally {
       setLoading(false)
     }
+
   }, [user])
 
   useEffect(() => {

@@ -1,0 +1,205 @@
+/* src/pages/InterviewPrepPage.css */
+
+.interview-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--sp-5);
+}
+
+@media (max-width: 850px) {
+  .interview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.category-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+@media (max-width: 850px) {
+  .category-nav-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.cat-nav-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+@media (max-width: 850px) {
+  .cat-nav-card {
+    flex: 1 1 140px;
+    padding: 10px 12px;
+  }
+}
+
+.cat-nav-card:hover {
+  border-color: var(--border-active);
+  transform: translateX(2px);
+}
+
+@media (max-width: 850px) {
+  .cat-nav-card:hover {
+    transform: none;
+  }
+}
+
+.cat-nav-card.is-active {
+  background: var(--bg-panel-raised);
+  border-color: var(--signal-amber);
+  box-shadow: 0 0 0 3px var(--signal-amber-glow);
+}
+
+.cat-nav-card-label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cat-nav-card-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.ai-suggestion-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  transition: all var(--dur-base) var(--ease-out);
+}
+
+.ai-suggestion-box:hover {
+  border-color: var(--signal-violet);
+  box-shadow: 0 4px 20px -5px rgba(139, 124, 246, 0.15);
+}
+
+.ai-suggestion-prompt {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: var(--bg-base);
+  border-left: 3px solid var(--signal-violet);
+  padding: 10px 12px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.accordion-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.accordion-card:hover {
+  border-color: var(--border-active);
+}
+
+.accordion-card.is-expanded {
+  border-color: var(--border-active);
+  box-shadow: var(--shadow-panel);
+}
+
+.accordion-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordion-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  margin-right: var(--sp-4);
+}
+
+.accordion-card-indicators {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-shrink: 0;
+}
+
+.accordion-card-body {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid var(--border-hairline);
+  padding-top: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  background: var(--bg-panel);
+}
+
+.accordion-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.accordion-answer-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.confidence-stars-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.star-rating-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.star-rating-btn:hover {
+  transform: scale(1.15);
+}
+
+.accordion-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  border-top: 1px solid var(--border-hairline);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.edit-form-wrapper {
+  padding: 16px;
+  border-top: 1px solid var(--border-hairline);
+  background: var(--bg-panel-raised);
+}

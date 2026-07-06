@@ -75,10 +75,13 @@ export function ThemeProvider({ children }) {
         }
     }, [preference])
 
-    const setThemePreference = (nextPreference) => {
+    const setThemePreference = async (nextPreference) => {
         setPreference(nextPreference)
         writeThemePreferenceToStorage(nextPreference)
         applyThemeToDocument(resolveTheme(nextPreference))
+        if (user?.id) {
+            saveThemePreference(user.id, nextPreference).catch(() => { })
+        }
     }
 
     const value = useMemo(() => ({
@@ -86,7 +89,7 @@ export function ThemeProvider({ children }) {
         preference,
         setThemePreference,
         resolvedTheme: resolveTheme(preference),
-    }), [loading, preference])
+    }), [loading, preference, user])
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
