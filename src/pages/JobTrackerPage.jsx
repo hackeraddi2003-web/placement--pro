@@ -57,7 +57,11 @@ export default function JobTrackerPage() {
   }
 
   const handleDelete = async (id) => {
-    await deleteJobApplication(id)
+    try {
+      await deleteJobApplication(id)
+    } catch (err) {
+      console.warn('[jobs] delete request failed', err?.message)
+    }
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }
 

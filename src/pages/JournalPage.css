@@ -93,6 +93,21 @@
   background: var(--bg-panel-hover);
 }
 
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.journal-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
 .timeline-item-date {
   font-size: 11px;
   color: var(--text-tertiary);

@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { offlineDb } from '../lib/offlineDb'
 
 const AuthContext = createContext(null)
+
+// Key to remember the last logged-in userId across page refreshes
+const LAST_USER_KEY = 'placementos_last_user_id'
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -10,11 +14,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
+      if (session?.user?.id) {
+        localStorage.setItem(LAST_USER_KEY, session.user.id)
+      }
       setLoading(false)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session?.user?.id) {
+        localStorage.setItem(LAST_USER_KEY, session.user.id)
+      }
     })
 
     return () => listener.subscription.unsubscribe()
@@ -29,7 +39,12 @@ export function AuthProvider({ children }) {
 
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password })
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = async () => {
+    // NOTE: We intentionally do NOT clear localStorage cache on logout
+    // so that if the same user logs back in, all their data loads instantly
+    // from cache before Supabase responds. To clear data, use Settings > Clear Data.
+    await supabase.auth.signOut()
+  }
 
   const value = {
     session,
