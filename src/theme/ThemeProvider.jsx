@@ -89,7 +89,7 @@ export function ThemeProvider({ children }) {
         preference,
         setThemePreference,
         resolvedTheme: resolveTheme(preference),
-    }), [loading, preference])
+    }), [loading, preference, user])
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
