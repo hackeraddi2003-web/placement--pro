@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { getLocalYYYYMMDD } from '../../lib/supabaseClient'
 
 /**
  * GitHub-style activity heatmap.
@@ -11,11 +12,14 @@ export default function ActivityHeatmap({ data = {}, weeks = 18 }) {
     today.setHours(0, 0, 0, 0)
     // Align to the most recent Saturday so columns are full weeks
     const endDay = today.getDay() // 0 = Sunday
+    const daysToSubtract = (endDay + 1) % 7
+    today.setDate(today.getDate() - daysToSubtract)
+
     const totalDays = weeks * 7
     for (let i = totalDays - 1; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = getLocalYYYYMMDD(d)
       result.push({ date: key, level: data[key] || 0 })
     }
     return result

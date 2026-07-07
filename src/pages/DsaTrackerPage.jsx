@@ -3,7 +3,8 @@ import { useAuth } from '../hooks/useAuth'
 import { Code2, Plus, ExternalLink } from 'lucide-react'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
-import { ensureDsaTopicsSeeded, updateDsaTopic, getDsaProblems, addDsaProblem, deleteDsaProblem } from '../lib/api/dsa'
+import { ensureDsaTopicsSeeded, updateDsaTopic, getDsaProblems, addDsaProblem, deleteDsaProblem, updateDsaProblem } from '../lib/api/dsa'
+import { awardXP } from '../lib/api/profile'
 
 const STATUS_OPTIONS = [
   { value: 'not_started', label: 'Not started', color: 'neutral' },
@@ -19,6 +20,7 @@ export default function DsaTrackerPage() {
   const [activeTopic, setActiveTopic] = useState(null)
   const [showProblemModal, setShowProblemModal] = useState(false)
   const [newProblem, setNewProblem] = useState({ problem_name: '', difficulty: 'Medium', link: '', notes: '' })
+  const [selectedProblem, setSelectedProblem] = useState(null)
 
   const load = useCallback(async () => {
     if (!user) return
@@ -40,9 +42,16 @@ export default function DsaTrackerPage() {
 
   const handleAddProblem = async (e) => {
     e.preventDefault()
-    const created = await addDsaProblem(user.id, { ...newProblem, topic_id: activeTopic.id })
-    setProblems((prev) => [created, ...prev])
-    await handleUpdateTopic(activeTopic, { problems_solved: (activeTopic.problems_solved || 0) + 1 })
+    if (selectedProblem) {
+      const updated = await updateDsaProblem(selectedProblem.id, { ...newProblem, topic_id: activeTopic.id })
+      setProblems((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+      setSelectedProblem(null)
+    } else {
+      const created = await addDsaProblem(user.id, { ...newProblem, topic_id: activeTopic.id })
+      setProblems((prev) => [created, ...prev])
+      await handleUpdateTopic(activeTopic, { problems_solved: (activeTopic.problems_solved || 0) + 1 })
+      await awardXP(user.id, 15, 'DSA Problem Solved')
+    }
     setNewProblem({ problem_name: '', difficulty: 'Medium', link: '', notes: '' })
     setShowProblemModal(false)
   }
@@ -130,26 +139,30 @@ export default function DsaTrackerPage() {
                   <div>
                     <label className="label-eyebrow">Notes</label>
                     <textarea
-                      className="input" rows={3} defaultValue={activeTopic.notes || ''}
-                      onBlur={(e) => handleUpdateTopic(activeTopic, { notes: e.target.value })}
+                      className="input" rows={3}
+                      value={activeTopic.notes || ''}
+                      onChange={(e) => setActiveTopic({ ...activeTopic, notes: e.target.value })}
+                      onBlur={() => handleUpdateTopic(activeTopic, { notes: activeTopic.notes })}
                     />
                   </div>
                   <div>
                     <label className="label-eyebrow">Weak areas</label>
                     <input
-                      className="input" defaultValue={activeTopic.weak_areas || ''}
-                      onBlur={(e) => handleUpdateTopic(activeTopic, { weak_areas: e.target.value })}
+                      className="input"
+                      value={activeTopic.weak_areas || ''}
+                      onChange={(e) => setActiveTopic({ ...activeTopic, weak_areas: e.target.value })}
+                      onBlur={() => handleUpdateTopic(activeTopic, { weak_areas: activeTopic.weak_areas })}
                       placeholder="e.g. struggle with in-place modification"
                     />
                   </div>
                   <div className="form-row-2">
                     <div>
                       <label className="label-eyebrow">Last revised</label>
-                      <input type="date" className="input" defaultValue={activeTopic.last_revised || ''} onChange={(e) => handleUpdateTopic(activeTopic, { last_revised: e.target.value })} />
+                      <input type="date" className="input" value={activeTopic.last_revised || ''} onChange={(e) => setActiveTopic({ ...activeTopic, last_revised: e.target.value })} onBlur={() => handleUpdateTopic(activeTopic, { last_revised: activeTopic.last_revised })} />
                     </div>
                     <div>
                       <label className="label-eyebrow">Next revision</label>
-                      <input type="date" className="input" defaultValue={activeTopic.next_revision || ''} onChange={(e) => handleUpdateTopic(activeTopic, { next_revision: e.target.value })} />
+                      <input type="date" className="input" value={activeTopic.next_revision || ''} onChange={(e) => setActiveTopic({ ...activeTopic, next_revision: e.target.value })} onBlur={() => handleUpdateTopic(activeTopic, { next_revision: activeTopic.next_revision })} />
                     </div>
                   </div>
                 </div>
@@ -164,7 +177,7 @@ export default function DsaTrackerPage() {
                   <EmptyState title="No problems logged" copy="Add the problems you've solved for this topic." />
                 ) : (
                   topicProblems.map((p) => (
-                    <div className="list-row" key={p.id}>
+                    <div key={p.id} className="list-row" style={{ cursor: 'pointer' }} onClick={() => { setSelectedProblem(p); setNewProblem({ problem_name: p.problem_name, difficulty: p.difficulty || 'Medium', link: p.link || '', notes: p.notes || '' }); setShowProblemModal(true); }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14 }}>{p.problem_name}</div>
                         {p.link && (
@@ -174,7 +187,7 @@ export default function DsaTrackerPage() {
                         )}
                       </div>
                       <span className={`tag ${p.difficulty === 'Hard' ? 'tag-red' : p.difficulty === 'Medium' ? 'tag-amber' : 'tag-teal'}`}>{p.difficulty}</span>
-                      <button className="icon-btn" onClick={() => handleDeleteProblem(p.id)} style={{ fontSize: 12 }}>✕</button>
+                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleDeleteProblem(p.id) }} style={{ fontSize: 12 }}>✕</button>
                     </div>
                   ))
                 )}

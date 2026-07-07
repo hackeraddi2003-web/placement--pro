@@ -311,3 +311,58 @@ textarea.input {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ---- Project card hover effects ---- */
+.project-card {
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--signal-teal) !important;
+  box-shadow: 0 12px 30px -10px rgba(45, 212, 191, 0.15), var(--shadow-raised) !important;
+}
+
+/* ---- Panel hover smooth border transition ---- */
+.panel {
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.panel:hover {
+  border-color: var(--border-active);
+}
+
+/* ---- Mood button active scale ---- */
+.mood-btn {
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.mood-btn:hover {
+  transform: scale(1.08);
+}
+.mood-btn.is-active {
+  transform: scale(1.12);
+  background: var(--signal-amber-dim) !important;
+  border-color: var(--signal-amber) !important;
+  color: var(--signal-amber) !important;
+}
+
+/* ---- Glassmorphism overlay ---- */
+.modal-backdrop {
+  backdrop-filter: blur(8px) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+.modal-content {
+  border: 1px solid var(--border-active) !important;
+  background: rgba(24, 29, 38, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+
+/* ---- Input Glow ---- */
+.input {
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.input:focus {
+  box-shadow: 0 0 0 3px var(--signal-amber-glow) !important;
+}
+

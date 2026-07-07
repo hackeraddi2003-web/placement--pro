@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { getLocalYYYYMMDD } from '../lib/supabaseClient'
 import { BarChart3, Calendar, Clock, Flame, Code2, MessageCircle } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, RadarChart, PolarGrid,
@@ -46,26 +47,35 @@ export default function AnalyticsPage() {
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const [j, e, topics, problems, proj, subj, iq, profile] = await Promise.all([
-      getJournalEntries(user.id, { limit: 90 }),
-      getEnglishLogs(user.id, { limit: 90 }),
-      getDsaTopics(user.id),
-      getDsaProblems(user.id),
-      getProjects(user.id),
-      getSubjectProgress(user.id),
-      getInterviewQuestions(user.id),
-      getProfile(user.id),
-    ])
-    setJournal(j)
-    setEnglish(e)
-    setDsaTopics(topics)
-    setDsaProblems(problems)
-    setProjects(proj)
-    setSubjects(subj)
-    setInterviewQs(iq)
-    setStreak(profile?.streak_count || 0)
-    setLoading(false)
+    try {
+      const results = await Promise.allSettled([
+        getJournalEntries(user.id, { limit: 90 }),
+        getEnglishLogs(user.id, { limit: 90 }),
+        getDsaTopics(user.id),
+        getDsaProblems(user.id),
+        getProjects(user.id),
+        getSubjectProgress(user.id),
+        getInterviewQuestions(user.id),
+        getProfile(user.id),
+      ])
+      const [j, e, topics, problems, proj, subj, iq, profile] = results.map(
+        (r) => (r.status === 'fulfilled' ? r.value : null)
+      )
+      setJournal(Array.isArray(j) ? j : [])
+      setEnglish(Array.isArray(e) ? e : [])
+      setDsaTopics(Array.isArray(topics) ? topics : [])
+      setDsaProblems(Array.isArray(problems) ? problems : [])
+      setProjects(Array.isArray(proj) ? proj : [])
+      setSubjects(Array.isArray(subj) ? subj : [])
+      setInterviewQs(Array.isArray(iq) ? iq : [])
+      setStreak(profile?.streak_count || 0)
+    } catch (err) {
+      console.error('[Analytics] load error:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [user])
+
 
   useEffect(() => { load() }, [load])
 
@@ -74,10 +84,12 @@ export default function AnalyticsPage() {
   // ---- Study consistency (hours per day, recent window) ----
   const consistencyData = useMemo(() => {
     const days = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     for (let i = windowDays - 1; i >= 0; i--) {
-      const d = new Date()
+      const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const iso = d.toISOString().slice(0, 10)
+      const iso = getLocalYYYYMMDD(d)
       const entry = journal.find((j) => j.entry_date === iso)
       days.push({ date: iso, label: fmtDay(iso), hours: entry?.study_hours || 0, mood: entry?.mood || null })
     }

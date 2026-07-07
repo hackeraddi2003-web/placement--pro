@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { KeyRound, Download, Upload, LogOut, ShieldAlert, CheckCircle2 } from 'lucide-react'
+import { KeyRound, Download, Upload, LogOut, ShieldAlert, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
 import { loadAiSettings, saveAiSettings, getProfile } from '../lib/api/profile'
 import { supabase } from '../lib/supabaseClient'
 import { useTheme } from '../theme/ThemeProvider'
@@ -205,20 +205,46 @@ export default function SettingsPage() {
         <div className="section-card-header">
           <span className="section-card-title">Theme</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <select
-            className="input"
-            style={{ width: 260 }}
-            value={preference}
-            onChange={(e) => setThemePreference(e.target.value)}
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-          <span className="tag tag-neutral">
-            {preference === 'system' ? 'Follows OS' : preference[0].toUpperCase() + preference.slice(1)}
-          </span>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+          Choose your visual cockpit theme. Selecting System will automatically sync the appearance with your operating system preference.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+          {[
+            { value: 'system', label: 'System', desc: 'Sync with OS', icon: Monitor },
+            { value: 'light', label: 'Light', desc: 'Bright panel', icon: Sun },
+            { value: 'dark', label: 'Dark', desc: 'Dark cockpit', icon: Moon }
+          ].map((opt) => {
+            const Icon = opt.icon
+            const isActive = preference === opt.value
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  padding: '18px 12px',
+                  background: isActive ? 'var(--bg-panel-hover)' : 'var(--bg-panel-raised)',
+                  border: '1.5px solid',
+                  borderColor: isActive ? 'var(--signal-amber)' : 'var(--border-hairline)',
+                  borderRadius: 'var(--r-md)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  transition: 'all var(--dur-fast) var(--ease-out)',
+                  boxShadow: isActive ? '0 0 0 3px var(--signal-amber-glow)' : 'none',
+                  outline: 'none'
+                }}
+                onClick={() => setThemePreference(opt.value)}
+              >
+                <Icon size={20} color={isActive ? 'var(--signal-amber)' : 'var(--text-secondary)'} style={{ marginBottom: 8 }} />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', marginTop: 3 }}>{opt.desc}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 

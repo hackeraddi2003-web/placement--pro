@@ -1,16 +1,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { getLocalYYYYMMDD } from '../lib/supabaseClient'
 import {
   Flame, Clock, ListChecks, TrendingUp, Target, Plus, Check,
+  Heart, Trophy, ShieldAlert, Sparkles, Award
 } from 'lucide-react'
 import StatCard from '../components/ui/StatCard'
 import ReadinessGauge from '../components/ui/ReadinessGauge'
 import ActivityHeatmap from '../components/ui/ActivityHeatmap'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
-import { getProfile, updateStreak } from '../lib/api/profile'
+import { getProfile, updateStreak, awardXP, healHeart, updateProfile } from '../lib/api/profile'
 import {
   getTasksByDate,
+  getPastUncompletedTasks,
   addTask,
   toggleTask,
   updateTask,
@@ -30,7 +33,7 @@ import { getInterviewQuestions } from '../lib/api/interview'
 import { calculateReadinessScore } from '../lib/readinessScore'
 import ThemeToggle from '../components/ui/ThemeToggle'
 
-const todayStr = () => new Date().toISOString().slice(0, 10)
+const todayStr = () => getLocalYYYYMMDD()
 
 
 export default function Dashboard() {
@@ -64,18 +67,17 @@ export default function Dashboard() {
     try {
       const today = todayStr()
 
-      const [
-        profileData,
-        todayTasks,
-        goalsData,
-        journals,
-        dsaTopics,
-        projects,
-        subjects,
-        englishLogs,
-        interviewQs,
-        statsData,
-      ] = await Promise.all([
+      // Rollover past uncompleted tasks to today
+      try {
+        const pastTasks = await getPastUncompletedTasks(user.id, today)
+        if (pastTasks && pastTasks.length > 0) {
+          await Promise.all(pastTasks.map((t) => updateTask(t.id, { task_date: today })))
+        }
+      } catch (err) {
+        console.warn('Failed to rollover past uncompleted tasks:', err)
+      }
+
+      const results = await Promise.allSettled([
         updateStreak(user.id),
         getTasksByDate(user.id, today),
         getGoals(user.id),
@@ -88,36 +90,44 @@ export default function Dashboard() {
         getDailyTaskStatsByDate(user.id, today),
       ])
 
-      setProfile(profileData)
-      setTasks(todayTasks)
+      const [
+        profileData, todayTasks, goalsData, journals,
+        dsaTopics, projects, subjects, englishLogs, interviewQs, statsData,
+      ] = results.map((r) => (r.status === 'fulfilled' ? r.value : null))
+
+      setProfile(profileData || {})
+      setTasks(Array.isArray(todayTasks) ? todayTasks : [])
       setTaskStats(statsData || null)
       setTaskProgressPct(typeof statsData?.completion_pct === 'number' ? statsData.completion_pct : 0)
 
-      setGoals(goalsData.filter((g) => !g.is_completed).slice(0, 5))
-      setJournalEntries(journals)
+      setGoals(Array.isArray(goalsData) ? goalsData.filter((g) => !g.is_completed).slice(0, 5) : [])
+      setJournalEntries(Array.isArray(journals) ? journals : [])
 
       setReadiness(
         calculateReadinessScore({
-          dsaTopics,
-          projects,
-          subjects,
-          englishLogs,
-          interviewQuestions: interviewQs,
-          streak: profileData.streak_count || 0,
+          dsaTopics: Array.isArray(dsaTopics) ? dsaTopics : [],
+          projects: Array.isArray(projects) ? projects : [],
+          subjects: Array.isArray(subjects) ? subjects : [],
+          englishLogs: Array.isArray(englishLogs) ? englishLogs : [],
+          interviewQuestions: Array.isArray(interviewQs) ? interviewQs : [],
+          streak: profileData?.streak_count || 0,
         })
       )
 
       const map = {}
-      journals.forEach((j) => {
-        const intensity = j.study_hours >= 4 ? 4 : j.study_hours >= 2 ? 3 : j.study_hours > 0 ? 2 : 1
-        map[j.entry_date] = intensity
-      })
+      if (Array.isArray(journals)) {
+        journals.forEach((j) => {
+          const intensity = j.study_hours >= 4 ? 4 : j.study_hours >= 2 ? 3 : j.study_hours > 0 ? 2 : 1
+          map[j.entry_date] = intensity
+        })
+      }
       setHeatmapData(map)
     } catch (err) {
       console.error('Dashboard load error:', err)
     } finally {
       setLoading(false)
     }
+
   }, [user])
 
   useEffect(() => {
@@ -165,6 +175,11 @@ export default function Dashboard() {
     const next = tasks.map((t) => (t.id === task.id ? updated : t))
     setTasks(next)
     await recalcAndPersistTaskStats(next)
+
+    // Award XP
+    await awardXP(user.id, updated.is_completed ? 10 : -10, 'Task Toggled')
+    const updatedProfile = await getProfile(user.id)
+    setProfile(updatedProfile)
   }
 
   const startEditingTask = (task) => {
@@ -209,6 +224,19 @@ export default function Dashboard() {
     setNewGoalTitle('')
     setNewGoalDate('')
     setShowGoalModal(false)
+  }
+
+  const handleClaimQuest = async () => {
+    if (completedToday < 2) return
+
+    await awardXP(user.id, 25, 'Daily Quest Completed')
+    await healHeart(user.id, 1)
+
+    const updated = await updateProfile(user.id, {
+      daily_quest_completed: true,
+      last_quest_date: todayStr()
+    })
+    setProfile(updated)
   }
 
   const completedToday = tasks.filter((t) => t.is_completed).length
@@ -411,6 +439,91 @@ export default function Dashboard() {
 
           <div className="panel section-card">
             <div className="section-card-header">
+              <span className="section-card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} color="var(--signal-amber)" />
+                Quest Center
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Level {profile?.level || 1}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                    {profile?.level >= 5 ? 'PLACEMENT READY 🚀' : profile?.level >= 4 ? 'ALGORITHM MASTER 🧠' : profile?.level >= 3 ? 'CODE WARRIOR ⚔️' : profile?.level >= 2 ? 'APPRENTICE 🛡️' : 'NOVICE ⚔️'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 4 }} title={`${profile?.hearts || 3} Hearts remaining. Keep your streak to preserve them!`}>
+                  {Array.from({ length: 3 }).map((_, idx) => {
+                    const active = idx < (profile?.hearts !== undefined ? profile.hearts : 3)
+                    return <Heart key={idx} size={18} fill={active ? 'var(--signal-red)' : 'transparent'} color={active ? 'var(--signal-red)' : 'var(--border-active)'} style={{ filter: active ? 'drop-shadow(0 0 2px var(--signal-red))' : 'none' }} />
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>XP PROGRESS</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{(profile?.xp || 0) % 100} / 100</span>
+                </div>
+                <div className="progress-track" aria-label="XP progress" style={{ height: 6 }}>
+                  <div className="progress-fill" style={{ width: `${(profile?.xp || 0) % 100}%`, background: 'var(--signal-teal)' }} />
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-panel-raised)', padding: 12, borderRadius: 8, border: '1px dashed var(--border-active)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  <Trophy size={14} color="var(--signal-amber)" />
+                  Daily Quest
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  Complete at least 2 daily tasks today.
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8, fontFamily: 'var(--font-mono)' }}>
+                  <span>Progress</span>
+                  <span>{completedToday} / 2 completed</span>
+                </div>
+                <div className="progress-track" style={{ height: 4, marginBottom: 12 }}>
+                  <div className="progress-fill" style={{ width: `${Math.min(100, (completedToday / 2) * 100)}%`, background: 'var(--signal-amber)' }} />
+                </div>
+
+                {profile?.last_quest_date === todayStr() && profile?.daily_quest_completed ? (
+                  <button className="btn btn-ghost" disabled style={{ width: '100%', fontSize: 12, padding: '6px' }}>
+                    Quest Claimed 🎉 (+25 XP, +1 ❤️)
+                  </button>
+                ) : (completedToday >= 2) ? (
+                  <button className="btn btn-primary" onClick={handleClaimQuest} style={{ width: '100%', fontSize: 12, padding: '6px', cursor: 'pointer' }}>
+                    Claim Quest Reward!
+                  </button>
+                ) : (
+                  <button className="btn btn-ghost" disabled style={{ width: '100%', fontSize: 12, padding: '6px' }}>
+                    Quest In Progress...
+                  </button>
+                )}
+              </div>
+
+              {profile?.badges && profile.badges.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Award size={12} /> Achievements
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {profile.badges.map((badge, idx) => (
+                      <span key={idx} className="tag tag-amber" style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12 }}>
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="panel section-card">
+            <div className="section-card-header">
               <span className="section-card-title">Upcoming Goals</span>
               <button className="btn btn-ghost" onClick={() => setShowGoalModal(true)}>
                 <Plus size={16} />
@@ -426,6 +539,9 @@ export default function Dashboard() {
                     onClick={async () => {
                       await toggleGoal(goal.id, true)
                       setGoals((prev) => prev.filter((g) => g.id !== goal.id))
+                      await awardXP(user.id, 20, 'Goal Completed')
+                      const updatedProfile = await getProfile(user.id)
+                      setProfile(updatedProfile)
                     }}
                     style={{
                       display: 'flex',

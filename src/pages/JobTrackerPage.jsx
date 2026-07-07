@@ -8,8 +8,10 @@ import {
   getJobApplications, addJobApplication, updateJobApplication, deleteJobApplication,
 } from '../lib/api/jobs'
 
+import { getLocalYYYYMMDD } from '../lib/supabaseClient'
+
 const BLANK = {
-  company: '', role: '', package_lpa: '', application_date: new Date().toISOString().slice(0, 10),
+  company: '', role: '', package_lpa: '', application_date: getLocalYYYYMMDD(),
   stage: 'applied', oa_status: '', interview_status: '', result: '', notes: '',
 }
 
@@ -57,7 +59,11 @@ export default function JobTrackerPage() {
   }
 
   const handleDelete = async (id) => {
-    await deleteJobApplication(id)
+    try {
+      await deleteJobApplication(id)
+    } catch (err) {
+      console.warn('[jobs] delete request failed', err?.message)
+    }
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }
 
