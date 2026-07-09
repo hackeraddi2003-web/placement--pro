@@ -1,1 +1,9 @@
 node_modules
+dist
+zipFile.zip
+placementos-final.zip
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
