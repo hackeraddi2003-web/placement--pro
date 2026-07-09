@@ -4,12 +4,13 @@ import { useAuth } from '../../hooks/useAuth'
 import {
   LayoutDashboard, BookOpen, MessageSquareText, Code2, Layers,
   FolderKanban, Brain, Briefcase, Sparkles, BarChart3, Settings,
-  Menu, X, LogOut,
+  Menu, X, LogOut, History,
 } from 'lucide-react'
 import './AppLayout.css'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/history', label: 'History', icon: History },
   { to: '/journal', label: 'Journal', icon: BookOpen },
   { to: '/english', label: 'English Hub', icon: MessageSquareText },
   { to: '/dsa', label: 'DSA Tracker', icon: Code2 },

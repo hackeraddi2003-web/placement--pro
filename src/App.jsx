@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
+import HistoryPage from './pages/HistoryPage'
 import JournalPage from './pages/JournalPage'
 import EnglishHubPage from './pages/EnglishHubPage'
 import DsaTrackerPage from './pages/DsaTrackerPage'
@@ -49,6 +50,7 @@ export default function App() {
               }
             >
               <Route index element={<Dashboard />} />
+              <Route path="history" element={<HistoryPage />} />
               <Route path="journal" element={<JournalPage />} />
               <Route path="english" element={<PrivateRoute requireAuth={false}><EnglishHubPage /></PrivateRoute>} />
               <Route path="dsa" element={<DsaTrackerPage />} />

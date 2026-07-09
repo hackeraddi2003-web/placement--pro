@@ -67,14 +67,41 @@ export default function Dashboard() {
     try {
       const today = todayStr()
 
-      // Rollover past uncompleted tasks to today
+      // Carry forward unfinished tasks from previous days WITHOUT touching
+      // their original record — history must stay intact under its own
+      // date. We only clone them into today's list if today doesn't already
+      // have an equivalent (by title) so re-running load() never duplicates.
       try {
         const pastTasks = await getPastUncompletedTasks(user.id, today)
         if (pastTasks && pastTasks.length > 0) {
-          await Promise.all(pastTasks.map((t) => updateTask(t.id, { task_date: today })))
+          const todaysTasks = await getTasksByDate(user.id, today)
+          const seenTitles = new Set((todaysTasks || []).map((t) => t.title))
+          // Multiple past days can carry the same unfinished title (e.g. a
+          // task missed 3 days running) — dedupe against titles already
+          // queued in this run too, not just what's already in today's list,
+          // so one carry-forward pass never creates duplicates.
+          const toCarry = []
+          for (const t of pastTasks) {
+            if (seenTitles.has(t.title)) continue
+            seenTitles.add(t.title)
+            toCarry.push(t)
+          }
+          if (toCarry.length > 0) {
+            await Promise.all(
+              toCarry.map((t) =>
+                addTask(user.id, {
+                  title: t.title,
+                  category: t.category,
+                  priority: t.priority,
+                  task_date: today,
+                  is_completed: false,
+                })
+              )
+            )
+          }
         }
       } catch (err) {
-        console.warn('Failed to rollover past uncompleted tasks:', err)
+        console.warn('Failed to carry forward unfinished tasks:', err)
       }
 
       const results = await Promise.allSettled([
@@ -95,10 +122,24 @@ export default function Dashboard() {
         dsaTopics, projects, subjects, englishLogs, interviewQs, statsData,
       ] = results.map((r) => (r.status === 'fulfilled' ? r.value : null))
 
+      const normalizedTasks = Array.isArray(todayTasks) ? todayTasks : []
       setProfile(profileData || {})
-      setTasks(Array.isArray(todayTasks) ? todayTasks : [])
-      setTaskStats(statsData || null)
-      setTaskProgressPct(typeof statsData?.completion_pct === 'number' ? statsData.completion_pct : 0)
+      setTasks(normalizedTasks)
+
+      // Recompute stats from the freshly-loaded task list rather than trusting
+      // the cached daily_task_stats row, which goes stale the moment
+      // carry-forward adds tasks to today that stats hasn't seen yet.
+      const totalTasks = normalizedTasks.length
+      const completedTasks = normalizedTasks.filter((t) => t.is_completed).length
+      const completionPct = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
+      setTaskStats({ task_date: today, total_tasks: totalTasks, completed_tasks: completedTasks, completion_pct: completionPct })
+      setTaskProgressPct(completionPct)
+      upsertDailyTaskStats(user.id, {
+        task_date: today,
+        total_tasks: totalTasks,
+        completed_tasks: completedTasks,
+        completion_pct: completionPct,
+      }).catch((err) => console.warn('Failed to persist task stats:', err))
 
       setGoals(Array.isArray(goalsData) ? goalsData.filter((g) => !g.is_completed).slice(0, 5) : [])
       setJournalEntries(Array.isArray(journals) ? journals : [])
