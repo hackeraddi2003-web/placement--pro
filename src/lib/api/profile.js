@@ -164,7 +164,28 @@ export async function loadAiSettings(userId) {
 }
 
 /**
- * Updates streak based on last_active_date.
+ * Calendar-date-safe day difference. Parses 'YYYY-MM-DD' strings as UTC
+ * calendar dates so the result is never off-by-one due to local timezone
+ * offset quirks in `new Date(dateString)` parsing.
+ */
+function daysBetweenDates(startStr, endStr) {
+  const [y1, m1, d1] = startStr.split('-').map(Number)
+  const [y2, m2, d2] = endStr.split('-').map(Number)
+  const start = Date.UTC(y1, m1 - 1, d1)
+  const end = Date.UTC(y2, m2 - 1, d2)
+  return Math.round((end - start) / 86400000)
+}
+
+const DAILY_LOGIN_XP = 5
+
+/**
+ * Updates streak based on last_active_date. Rules:
+ * - Logging in "today" (already counted) is a no-op — never double counts.
+ * - Logging in exactly one calendar day after the last active date increments
+ *   the current streak by 1.
+ * - Missing one or more calendar days resets the current streak to 1 (today
+ *   becomes day one of a new streak).
+ * - Longest streak is monotonically preserved.
  * Call this once per session after login / on dashboard load.
  */
 export async function updateStreak(userId) {
@@ -175,37 +196,30 @@ export async function updateStreak(userId) {
   if (last === today) return profile // already counted today
 
   let newStreak = 1
-  let hearts = profile.hearts !== undefined ? profile.hearts : 3
-  let xp = profile.xp || 0
-
   if (last) {
-    const diffDays = Math.round((new Date(today) - new Date(last)) / 86400000)
+    const diffDays = daysBetweenDates(last, today)
     if (diffDays === 1) {
       newStreak = (profile.streak_count || 0) + 1
-    } else if (diffDays === 0) {
+    } else if (diffDays <= 0) {
+      // Defensive: clock skew or duplicate call — keep current streak.
       newStreak = profile.streak_count || 1
-    } else if (diffDays > 1) {
-      // Streak broken! Lose a heart!
-      hearts = hearts - 1
-      if (hearts <= 0) {
-        // Penalty: lose 50 XP
-        xp = Math.max(0, xp - 50)
-        hearts = 3
-      }
+    } else {
+      // diffDays > 1: at least one full day was missed. Streak resets.
+      newStreak = 1
     }
   }
 
   const longest = Math.max(newStreak, profile?.longest_streak || 0)
-  const level = Math.floor(xp / 100) + 1
 
-  return updateProfile(userId, {
+  const updated = await updateProfile(userId, {
     streak_count: newStreak,
     longest_streak: longest,
     last_active_date: today,
-    hearts,
-    xp,
-    level,
   })
+
+  // Award daily-login XP once per calendar day, after the streak is saved.
+  return awardXP(userId, DAILY_LOGIN_XP, 'Daily Login')
+    .catch(() => updated) // never block streak update on an XP hiccup
 }
 
 export async function awardXP(userId, amount, reason = '') {

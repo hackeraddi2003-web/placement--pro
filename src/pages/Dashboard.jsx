@@ -3,14 +3,14 @@ import { useAuth } from '../hooks/useAuth'
 import { getLocalYYYYMMDD } from '../lib/supabaseClient'
 import {
   Flame, Clock, ListChecks, TrendingUp, Target, Plus, Check,
-  Heart, Trophy, ShieldAlert, Sparkles, Award
+  Trophy, Sparkles, Award
 } from 'lucide-react'
 import StatCard from '../components/ui/StatCard'
 import ReadinessGauge from '../components/ui/ReadinessGauge'
 import ActivityHeatmap from '../components/ui/ActivityHeatmap'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
-import { getProfile, updateStreak, awardXP, healHeart, updateProfile } from '../lib/api/profile'
+import { getProfile, updateStreak, awardXP, updateProfile } from '../lib/api/profile'
 import {
   getTasksByDate,
   getPastUncompletedTasks,
@@ -230,7 +230,6 @@ export default function Dashboard() {
     if (completedToday < 2) return
 
     await awardXP(user.id, 25, 'Daily Quest Completed')
-    await healHeart(user.id, 1)
 
     const updated = await updateProfile(user.id, {
       daily_quest_completed: true,
@@ -456,11 +455,9 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 4 }} title={`${profile?.hearts || 3} Hearts remaining. Keep your streak to preserve them!`}>
-                  {Array.from({ length: 3 }).map((_, idx) => {
-                    const active = idx < (profile?.hearts !== undefined ? profile.hearts : 3)
-                    return <Heart key={idx} size={18} fill={active ? 'var(--signal-red)' : 'transparent'} color={active ? 'var(--signal-red)' : 'var(--border-active)'} style={{ filter: active ? 'drop-shadow(0 0 2px var(--signal-red))' : 'none' }} />
-                  })}
+                <div className="tag tag-amber" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Flame size={14} />
+                  {profile?.streak_count || 0}d streak
                 </div>
               </div>
 
@@ -492,7 +489,7 @@ export default function Dashboard() {
 
                 {profile?.last_quest_date === todayStr() && profile?.daily_quest_completed ? (
                   <button className="btn btn-ghost" disabled style={{ width: '100%', fontSize: 12, padding: '6px' }}>
-                    Quest Claimed 🎉 (+25 XP, +1 ❤️)
+                    Quest Claimed 🎉 (+25 XP)
                   </button>
                 ) : (completedToday >= 2) ? (
                   <button className="btn btn-primary" onClick={handleClaimQuest} style={{ width: '100%', fontSize: 12, padding: '6px', cursor: 'pointer' }}>
