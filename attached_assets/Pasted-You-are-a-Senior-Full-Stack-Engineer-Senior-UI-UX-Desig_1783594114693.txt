@@ -1,0 +1,445 @@
+You are a Senior Full Stack Engineer, Senior UI/UX Designer, Product Designer, and Supabase Expert.
+
+Before making any changes, analyze the entire project thoroughly.
+
+Understand:
+- Folder structure
+- React + Vite architecture
+- Routing
+- Components
+- Context APIs
+- Authentication
+- Supabase integration
+- Database tables
+- Storage
+- Dashboard logic
+- Gamification system
+- XP system
+- Daily Tasks
+- Journal
+- DSA Tracker
+- English Hub
+- AI Mentor
+- Subject Tracker
+- Goals
+- Projects
+- Profile
+- Notifications
+- All existing features
+
+IMPORTANT:
+Do NOT break any existing functionality.
+Do NOT remove any feature unless replacing it with a better version.
+Maintain clean architecture.
+Follow reusable component architecture.
+Use modern React best practices.
+
+--------------------------------------------------
+
+OBJECTIVE
+
+Transform this application into a Premium Placement Operating System that feels like a modern Android application with smooth animations, beautiful UI, and powerful productivity features.
+
+--------------------------------------------------
+
+1. COMPLETE UI REDESIGN
+
+Redesign EVERY screen.
+
+This includes:
+
+• Login
+• Signup
+• Dashboard
+• Sidebar
+• Navigation
+• AI Mentor
+• Daily Tasks
+• Journal
+• English Hub
+• DSA Tracker
+• Subject Progress
+• Goals
+• Projects
+• Interview Preparation
+• Settings
+• Profile
+• Notifications
+• Analytics
+• Calendar
+• History
+• All cards
+• All dialogs
+• All buttons
+• All forms
+
+Use:
+
+Modern Glassmorphism
+Rounded Corners
+Premium Shadows
+Beautiful Gradients
+Smooth Animations
+Consistent Color Palette
+Minimal Design
+Professional Typography
+Excellent Mobile Responsiveness
+
+The application should look like a premium SaaS product.
+
+--------------------------------------------------
+
+2. FIX DAILY STREAK
+
+Currently the Daily Streak is broken.
+
+Fix it properly.
+
+Rules:
+
+If user logs in today:
+
+Current Streak +=1
+
+If user misses one day:
+
+Current Streak =0
+
+Longest Streak should always remain stored.
+
+Store streak permanently in Supabase.
+
+Never reset after refresh.
+
+Calculate streak based on calendar dates.
+
+--------------------------------------------------
+
+3. XP SYSTEM
+
+Current XP system should be redesigned.
+
+XP should increase whenever:
+
+Task Completed
+
+Leetcode Completed
+
+Daily Goal Completed
+
+Journal Written
+
+English Practice
+
+Project Progress
+
+Subject Progress
+
+DSA Completed
+
+Interview Practice
+
+Daily Login
+
+Level should increase automatically.
+
+Add:
+
+XP Progress Bar
+
+Level Badge
+
+Achievement Animation
+
+--------------------------------------------------
+
+4. DAILY TASK HISTORY
+
+Currently Daily Tasks disappear.
+
+Implement full history.
+
+Requirement:
+
+Each date should have its own task history.
+
+Example
+
+8 July
+✔ React
+✔ Java
+
+9 July
+✔ DSA
+✔ Resume
+
+10 July
+✔ Interview
+
+When the day ends,
+
+Automatically archive today's tasks.
+
+History must remain permanently stored.
+
+Allow viewing any previous date.
+
+--------------------------------------------------
+
+5. LEETCODE HISTORY
+
+Implement same system for Leetcode.
+
+Store:
+
+Date
+
+Problems Solved
+
+Difficulty
+
+Topic
+
+Notes
+
+Time
+
+Daily Streak
+
+History
+
+Analytics
+
+Charts
+
+--------------------------------------------------
+
+6. DASHBOARD IMPROVEMENTS
+
+Dashboard should feel alive.
+
+Include:
+
+Today's Progress
+
+Today's Tasks
+
+Today's XP
+
+Daily Streak
+
+Longest Streak
+
+Level
+
+Leaderboard Style Card
+
+Weekly Graph
+
+Monthly Graph
+
+Calendar Heatmap
+
+Recent Activity
+
+Quick Actions
+
+Upcoming Goals
+
+Motivational Quote
+
+--------------------------------------------------
+
+7. MOBILE APP EXPERIENCE
+
+Make application behave like a real mobile app.
+
+Fix:
+
+Responsive UI
+
+Touch Friendly
+
+Bottom Navigation
+
+Smooth Transitions
+
+Proper Safe Area
+
+Loading Screens
+
+Skeleton Loaders
+
+Pull to Refresh
+
+PWA Optimization
+
+Offline Support where possible
+
+--------------------------------------------------
+
+8. INSTALLABLE APP
+
+Improve PWA.
+
+Generate:
+
+Professional App Icon
+
+Adaptive Icon
+
+Splash Screen
+
+App Name
+
+Short Name
+
+Theme Color
+
+Maskable Icon
+
+Proper Manifest
+
+App should install exactly like:
+
+WhatsApp
+
+Instagram
+
+LinkedIn
+
+Spotify
+
+No blank icon.
+
+Icon should cover full app icon area.
+
+--------------------------------------------------
+
+9. LOGO
+
+Design a premium logo.
+
+Requirements:
+
+Minimal
+
+Modern
+
+Professional
+
+Blue + Purple gradient
+
+Represents:
+
+AI
+
+Placement
+
+Growth
+
+Productivity
+
+Career
+
+Use logo everywhere.
+
+Generate all required icon sizes.
+
+--------------------------------------------------
+
+10. PERFORMANCE
+
+Improve:
+
+Lazy Loading
+
+Code Splitting
+
+Image Optimization
+
+Caching
+
+Faster Dashboard
+
+Smooth Rendering
+
+--------------------------------------------------
+
+11. EXTRA PREMIUM FEATURES
+
+Add features if they improve productivity.
+
+Examples:
+
+Achievements
+
+Badges
+
+Daily Challenges
+
+Weekly Goals
+
+Monthly Progress
+
+Focus Timer
+
+Pomodoro
+
+Calendar
+
+Heatmap
+
+Study Insights
+
+AI Suggestions
+
+Productivity Score
+
+Weekly Report
+
+Monthly Report
+
+Dark Mode Improvements
+
+Notification Center
+
+Beautiful Charts
+
+Animated Statistics
+
+Recent Activity Timeline
+
+--------------------------------------------------
+
+12. DATABASE
+
+Update Supabase schema only where required.
+
+Create migrations.
+
+Do not lose existing user data.
+
+--------------------------------------------------
+
+13. FINAL
+
+After completing everything:
+
+Fix all bugs.
+
+Remove dead code.
+
+Optimize components.
+
+Ensure zero console errors.
+
+Ensure TypeScript/JavaScript warnings are removed.
+
+Verify every feature works after refresh.
+
+Application should feel like a production-ready premium SaaS platform.
+
+Never leave unfinished work.
+
+Complete everything professionally.
