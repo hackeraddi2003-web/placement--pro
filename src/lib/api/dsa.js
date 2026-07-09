@@ -149,3 +149,63 @@ export async function deleteDsaProblem(id) {
     }
   )
 }
+
+// ---- LeetCode history / analytics helpers ----
+// XP scales with difficulty so history reflects effort, not just count.
+export const DIFFICULTY_XP = { Easy: 10, Medium: 15, Hard: 25 }
+
+export function xpForDifficulty(difficulty) {
+  return DIFFICULTY_XP[difficulty] ?? 15
+}
+
+/** Groups a flat problems list by solved_date -> array of problems. */
+export function groupProblemsByDate(problems) {
+  const map = {}
+  for (const p of problems) {
+    const key = p.solved_date
+    if (!key) continue
+    if (!map[key]) map[key] = []
+    map[key].push(p)
+  }
+  return map
+}
+
+/**
+ * Current + longest consecutive-day solving streak, computed purely from
+ * distinct solved_date values already stored on dsa_problems. Never stored
+ * separately, so it can never drift from the actual history.
+ */
+export function calculateSolvingStreak(problems, todayStr) {
+  const dates = [...new Set(problems.map((p) => p.solved_date).filter(Boolean))].sort()
+  if (dates.length === 0) return { current: 0, longest: 0 }
+
+  const toUTC = (s) => {
+    const [y, m, d] = s.split('-').map(Number)
+    return Date.UTC(y, m - 1, d)
+  }
+
+  let longest = 1
+  let run = 1
+  for (let i = 1; i < dates.length; i++) {
+    const diff = Math.round((toUTC(dates[i]) - toUTC(dates[i - 1])) / 86400000)
+    run = diff === 1 ? run + 1 : 1
+    longest = Math.max(longest, run)
+  }
+
+  // Current streak: walk backward from today (or yesterday, so a day still
+  // in progress doesn't look "broken" before it's over).
+  const dateSet = new Set(dates)
+  let current = 0
+  let cursor = toUTC(todayStr)
+  if (!dateSet.has(todayStr)) {
+    cursor -= 86400000 // allow "yesterday" as the streak anchor
+  }
+  while (true) {
+    const key = new Date(cursor).toISOString().slice(0, 10)
+    if (!dateSet.has(key)) break
+    current += 1
+    cursor -= 86400000
+  }
+
+  return { current, longest }
+}

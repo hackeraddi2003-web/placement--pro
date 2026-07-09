@@ -135,9 +135,15 @@ export async function upsertDailyTaskStats(userId, stats) {
     stats,
     ['user_id', 'task_date'],
     async (item) => {
+      // daily_task_stats has no created_at/id columns (its PK is the
+      // user_id+task_date composite) — offlineDb.upsert adds both for local
+      // cache bookkeeping, so strip them before sending to Supabase.
+      const insertPayload = { ...item }
+      delete insertPayload.created_at
+      delete insertPayload.id
       const { data, error } = await supabase
         .from('daily_task_stats')
-        .upsert(item, { onConflict: 'user_id,task_date' })
+        .upsert(insertPayload, { onConflict: 'user_id,task_date' })
         .select()
         .single()
       if (error) throw error
